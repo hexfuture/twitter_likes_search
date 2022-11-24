@@ -50,6 +50,8 @@ async function getUserId() {
     userId = data.data.user.result.rest_id
     
     console.log(userId)
+
+    
     getLikes(userId);
 }
 
@@ -91,7 +93,7 @@ async function getLikes(userId) {
         }
 
         else {
-            cursor = null;
+            cursor = "";
             current_amount = 0;
             previous_amount = -1;
         }
@@ -151,6 +153,7 @@ searchInput.addEventListener("input", (e) => {
 })
 searchInput.addEventListener("keypress", (e) => {
     if (e.key === 'Enter') {
+        tweetSet = new Array()
         getUserId();
     }
 });
