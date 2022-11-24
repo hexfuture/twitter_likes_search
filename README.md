@@ -1,3 +1,5 @@
+### Search and filter likes of a specific user
+
 - Copy and paste the code from **likes_search.js** in your browser console;
 - In the Twitter search bar type: *liked_by:twitter_handle words* and press Enter;
 - Wait for the results.
