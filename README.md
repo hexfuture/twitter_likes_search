@@ -1,4 +1,4 @@
-### Search and filter likes of a specific user
+### Search and filter likes of a user
 
 - Log in to Twitter;
 - Copy and paste the code from **likes_search.js** in your browser console;
