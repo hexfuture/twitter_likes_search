@@ -15,11 +15,19 @@ let middle = document.cookie.slice(start)
 let end = middle.indexOf(";")
 let token = middle.slice(0, end)
 
-// URLs and features
+// Fetch stuff
 let baseLikeUrl = "https://twitter.com/i/api/graphql/lr2pk7rKqCqLSqWRGRaW5Q/Likes?"
 let baseUserIdUrl = "https://twitter.com/i/api/graphql/ptQPCD7NrFS_TW71Lq07nw/UserByScreenName?"
 let features = "&features=%7B%22responsive_web_twitter_blue_verified_badge_is_enabled%22%3Atrue%2C%22verified_phone_label_enabled%22%3Afalse%2C%22responsive_web_graphql_timeline_navigation_enabled%22%3Atrue%2C%22unified_cards_ad_metadata_container_dynamic_card_content_query_enabled%22%3Atrue%2C%22tweetypie_unmention_optimization_enabled%22%3Atrue%2C%22responsive_web_uc_gql_enabled%22%3Atrue%2C%22vibe_api_enabled%22%3Atrue%2C%22responsive_web_edit_tweet_api_enabled%22%3Atrue%2C%22graphql_is_translatable_rweb_tweet_is_translatable_enabled%22%3Atrue%2C%22standardized_nudges_misinfo%22%3Atrue%2C%22tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled%22%3Afalse%2C%22interactive_text_enabled%22%3Atrue%2C%22responsive_web_text_conversations_enabled%22%3Afalse%2C%22responsive_web_enhance_cards_enabled%22%3Atrue%7D"
-
+let headers = {
+    "credentials": "include",
+    "headers": {
+        "x-csrf-token": token,
+        "authorization": "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
+    },
+    "method": "GET",
+    "mode": "cors"
+}
 
 // Clean timeline from previous results / no results page
 function cleanTimeline() {
@@ -33,22 +41,15 @@ function cleanTimeline() {
 
 // Get user REST ID from user screen name (handle) (eg. elonmusk)
 async function getUserId() {
-    cleanTimeline();
-    let variables = "variables=%7B%22screen_name%22%3A%22" + encodeURIComponent(userScreenName) + "%22%2C%22withSafetyModeUserFields%22%3Atrue%2C%22withSuperFollowsUserFields%22%3Atrue%7D"
-    let response = await fetch(baseUserIdUrl + variables + features, {
-        "credentials": "include",
-        "headers": {
-            "x-csrf-token": token,
-            "authorization": "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
-        },
-        "method": "GET",
-        "mode": "cors"
-    })
-    let data = await response.json()
     
+    cleanTimeline();
+    
+    let variables = "variables=%7B%22screen_name%22%3A%22" + encodeURIComponent(userScreenName) + "%22%2C%22withSafetyModeUserFields%22%3Atrue%2C%22withSuperFollowsUserFields%22%3Atrue%7D"
+    let response = await fetch(baseUserIdUrl + variables + features, headers)
+    let data = await response.json()
     userId = data.data.user.result.rest_id
+    
     console.log(userId)
-
     getLikes(userId);
 }
 
@@ -56,15 +57,7 @@ async function getUserId() {
 async function getLikes(userId) {
     let variables = "variables=%7B%22userId%22%3A%22" + encodeURIComponent(userId) + "%22%2C%22count%22%3A100%2C%22cursor%22%3A%22" + encodeURIComponent(cursor) + "%22%2C%22includePromotedContent%22%3Afalse%2C%22withSuperFollowsUserFields%22%3Atrue%2C%22withDownvotePerspective%22%3Afalse%2C%22withReactionsMetadata%22%3Afalse%2C%22withReactionsPerspective%22%3Afalse%2C%22withSuperFollowsTweetFields%22%3Atrue%2C%22withClientEventToken%22%3Afalse%2C%22withBirdwatchNotes%22%3Afalse%2C%22withVoice%22%3Atrue%2C%22withV2Timeline%22%3Atrue%7D"
 
-    fetch(baseLikeUrl + variables + features, {
-        "credentials": "include",
-        "headers": {
-            "x-csrf-token": token,
-            "authorization": "Bearer AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
-        },
-        "method": "GET",
-        "mode": "cors"
-    })
+    fetch(baseLikeUrl + variables + features, headers)
     .then(res => res.json())
     .then(data => {
 
@@ -85,18 +78,20 @@ async function getLikes(userId) {
                 })
             }
             catch (err) {
+
             }
         })
         current_amount = tweetSet.length
-        
 
-        // Get cursor for next page
+
+        // Get cursor for next page and repeat request
         cursor = entries[entries.length - 1].content.value
         if (current_amount > previous_amount) {
             getLikes(userId);
         }
+
         else {
-            cursor = "";
+            cursor = null;
             current_amount = 0;
             previous_amount = -1;
         }
@@ -113,22 +108,20 @@ async function getLikes(userId) {
         if (filtered) {
             filtered.map(tweet => {
                 try {
+                    
                     let singleTweetElement = document.createElement("div")
+                    
                     singleTweetElement.innerHTML = singleTweetHTML
                     singleTweetElement.firstElementChild.style = "position: relative; width: 100%; transition: opacity 0.3s ease-out 0s;"
-                    singleTweetElement.querySelector('[data-testid="tweetText"]').innerText = tweet["full_text"]
-                    singleTweetElement
-                        .querySelector('[data-testid="Tweet-User-Avatar"]')
-                        .querySelector('[class="css-1dbjc4n r-1niwhzg r-vvn4in r-u6sd8q r-4gszlv r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-13qz1uu r-1wyyakw"]').style = 'background-image: url("' + tweet["img"] + '");'
-
-                    singleTweetElement
-                        .querySelector('[data-testid="User-Names"]').querySelectorAll('[class="css-901oao css-16my406 r-poiln3 r-bcqeeo r-qvutc0"]')[0].innerText = tweet["name"]
-                    singleTweetElement
-                        .querySelector('[data-testid="User-Names"]').querySelectorAll('[class="css-901oao css-16my406 r-poiln3 r-bcqeeo r-qvutc0"]')[1].innerText = "@" + tweet["screen_name"]
                     
+                    singleTweetElement.querySelector('[data-testid="tweetText"]').innerText = tweet["full_text"]
+                    singleTweetElement.querySelector('[data-testid="Tweet-User-Avatar"]').querySelector('[class="css-1dbjc4n r-1niwhzg r-vvn4in r-u6sd8q r-4gszlv r-1p0dtai r-1pi2tsx r-1d2f490 r-u8s1d r-zchlnj r-ipm5af r-13qz1uu r-1wyyakw"]').style = 'background-image: url("' + tweet["img"] + '");'
+
+                    singleTweetElement.querySelector('[data-testid="User-Names"]').querySelectorAll('[class="css-901oao css-16my406 r-poiln3 r-bcqeeo r-qvutc0"]')[0].innerText = tweet["name"]
+                    singleTweetElement.querySelector('[data-testid="User-Names"]').querySelectorAll('[class="css-901oao css-16my406 r-poiln3 r-bcqeeo r-qvutc0"]')[1].innerText = "@" + tweet["screen_name"]
+
                     singleTweetElement.firstElementChild.id = tweet['id']
-                    function seeTweet()
-                    {
+                    function seeTweet() {
                         window.location.replace("https://twitter.com/random_name/status/" + tweet["id"])
                     }
                     singleTweetElement.firstElementChild.onclick = seeTweet;
@@ -149,7 +142,7 @@ searchInput.addEventListener("input", (e) => {
     if (start > -1) {
         userScreenName = e.target.value.slice(start + 9, end)
         word_start = end
-        if (word_start > -1){
+        if (word_start > -1) {
             word = e.target.value.slice(word_start + 1)
         }
         console.log(userScreenName)
@@ -158,7 +151,7 @@ searchInput.addEventListener("input", (e) => {
 })
 searchInput.addEventListener("keypress", (e) => {
     if (e.key === 'Enter') {
-      getUserId();
+        getUserId();
     }
 });
 
